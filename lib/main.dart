@@ -72,12 +72,7 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
 
     final clientId = _clientIdController.text.trim();
     final clientSecret = _clientSecretController.text.trim();
-    if (clientId.isEmpty || clientSecret.isEmpty) {
-      setState(() {
-        _error = 'Client ID and secret are required.';
-      });
-      return;
-    }
+    final hasCredentials = clientId.isNotEmpty && clientSecret.isNotEmpty;
 
     setState(() {
       _isLoading = true;
@@ -91,12 +86,16 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
       'lomax': lomax.toString(),
     });
 
-    final authHeader = base64Encode(utf8.encode('$clientId:$clientSecret'));
+    final headers = <String, String>{};
+    if (hasCredentials) {
+      final authHeader = base64Encode(utf8.encode('$clientId:$clientSecret'));
+      headers['Authorization'] = 'Basic $authHeader';
+    }
 
     try {
       final response = await http.get(
         uri,
-        headers: {'Authorization': 'Basic $authHeader'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -130,7 +129,7 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
       setState(() {
         _error = 'Network error: $e';
         _isLoading = false;
-      });
+    });
     }
   }
 
@@ -144,7 +143,7 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
-          child: Column(
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
@@ -164,14 +163,18 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
               ),
               const SizedBox(height: 16),
               const Text(
-                'OpenSky Credentials',
+                'OpenSky Credentials (Optional)',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+              const Text(
+                'Leave empty for unauthenticated requests (rate limited)',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
               ),
               const SizedBox(height: 8),
               Wrap(
                 spacing: 12,
                 runSpacing: 12,
-                children: [
+          children: [
                   _buildTextField('Client ID', _clientIdController),
                   _buildTextField('Client Secret', _clientSecretController,
                       obscureText: true),
@@ -193,7 +196,7 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 12),
-                Text(
+            Text(
                   _error!,
                   style: const TextStyle(color: Colors.red),
                 ),
@@ -222,11 +225,11 @@ class _FlightTrackerHomePageState extends State<FlightTrackerHomePage> {
         keyboardType: const TextInputType.numberWithOptions(
           signed: true,
           decimal: true,
-        ),
+            ),
         decoration: InputDecoration(
           labelText: label,
           border: const OutlineInputBorder(),
-        ),
+      ),
       ),
     );
   }
